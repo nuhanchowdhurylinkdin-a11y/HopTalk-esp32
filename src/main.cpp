@@ -9,8 +9,15 @@
 #define RX_UUID "4AF882CE-9582-4515-BEAB-1941400E169B" // phone -> ESP32
 #define TX_UUID "718CEFEA-4CE7-4A32-BC46-8C24BC97BD7E" // ESP32 -> phone
 
-std::vector<String> activeUserIds;
-std::vector<String> stagedUserIds;
+using namespace std;
+
+vector<String> activeUserIds;
+vector<String> stagedUserIds;
+
+vector<vector<uint8_t>> messageFromMobileApp;
+vector<uint8_t> messageFromLoRaModule;
+
+bool isSendMode = true;
 
 BLECharacteristic *txChar;
 volatile bool connected = false;
@@ -95,8 +102,9 @@ class RxCb : public BLECharacteristicCallbacks
         return;
       }
 
-      Serial.printf("LoRa message packet received: %u bytes\n",
-                    (unsigned)length);
+      vector<uint8_t> singlePacket(data, data + length);
+      messageFromMobileApp.push_back(singlePacket);
+      Serial.printf("LoRa message packet received: %u bytes\n", (unsigned)length);
       return;
     }
 
@@ -233,4 +241,15 @@ void setup()
 
 void loop()
 {
+  if(!messageFromMobileApp.empty()) {
+    for(const vector<uint8_t> &packet : messageFromMobileApp) {
+      Serial.printf("Sent packet of size: %u bytes\n", (unsigned)packet.size());
+        for (uint8_t b : packet) {
+            Serial.printf("%02X ", b);
+        }
+        Serial.println();
+    }
+  }
+
+  delay(2000);
 }
