@@ -54,6 +54,28 @@ bool isValidIdPrefix(const String &id)
   return true;
 }
 
+bool hasReceiverId(const uint8_t *id8)
+{
+  String hex = "";
+  for (int i = 0; i < 8; i++)
+  {
+    if (id8[i] < 16)
+    {
+      hex += "0";
+
+      hex += String(id8[i], HEX);
+    }
+  }
+
+  for (const String &id : activeUserIds)
+  {
+    if (id.equalsIgnoreCase(hex))
+      return true;
+  }
+
+  return false;
+}
+
 class RxCb : public BLECharacteristicCallbacks
 {
   void onWrite(BLECharacteristic *c) override
@@ -131,11 +153,25 @@ class RxCb : public BLECharacteristicCallbacks
       return;
     }
 
-        const uint8_t operation = (uint8_t)value[0];
+    const uint8_t operation = (uint8_t)value[0];
     const String idPrefix(value.substring(1).c_str());
 
     if (!isValidIdPrefix(idPrefix))
       return;
+
+    if (operation == 0xA1)
+    {
+      for (const String &id : activeUserIds)
+      {
+        if (id == idPrefix)
+        {
+          Serial.printf("ID already in list: %s\n", idPrefix.c_str());
+          return;
+        }
+      }
+      activeUserIds.push_back(idPrefix);
+      Serial.printf("ID added: %s\n", idPrefix.c_str());
+    }
 
     else if (operation == 0xA2)
     {
