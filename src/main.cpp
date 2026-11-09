@@ -67,11 +67,9 @@ bool hasReceiverId(const uint8_t *id8)
   for (int i = 0; i < 8; i++)
   {
     if (id8[i] < 16)
-    {
       hex += "0";
 
-      hex += String(id8[i], HEX);
-    }
+    hex += String(id8[i], HEX);
   }
 
   for (const String &id : activeUserIds)
@@ -81,6 +79,25 @@ bool hasReceiverId(const uint8_t *id8)
   }
 
   return false;
+}
+
+void sendToPhone(const uint8_t *data, size_t len)
+{
+  if (!connected)
+  {
+    Serial.println("No phone connected!");
+    return;
+  }
+
+  if (len == 0 || len > 244)
+  {
+    Serial.println("Cannot send: bad size");
+    return;
+  }
+
+  txChar->setValue((uint8_t *)data, len);
+  txChar->notify();
+  Serial.printf("Sent to phone: %u bytes\n", (unsigned)len);
 }
 
 class RxCb : public BLECharacteristicCallbacks
@@ -99,6 +116,12 @@ class RxCb : public BLECharacteristicCallbacks
       if (length < 25)
       {
         Serial.println("LoRa packet too short");
+        return;
+      }
+
+      if (length > 200)
+      {
+        Serial.println("Packet too big");
         return;
       }
 
@@ -241,13 +264,16 @@ void setup()
 
 void loop()
 {
-  if(!messageFromMobileApp.empty()) {
-    for(const vector<uint8_t> &packet : messageFromMobileApp) {
+  if (!messageFromMobileApp.empty())
+  {
+    for (const vector<uint8_t> &packet : messageFromMobileApp)
+    {
       Serial.printf("Sent packet of size: %u bytes\n", (unsigned)packet.size());
-        for (uint8_t b : packet) {
-            Serial.printf("%02X ", b);
-        }
-        Serial.println();
+      for (uint8_t b : packet)
+      {
+        Serial.printf("%02X ", b);
+      }
+      Serial.println();
     }
   }
 
